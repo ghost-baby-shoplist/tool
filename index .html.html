@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="展覽購物">
+<meta name="theme-color" content="#1a1a2e">
+<title>展覽購物規劃</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f0f1a;
+    --surface: #1a1a2e;
+    --surface2: #242438;
+    --surface3: #2e2e45;
+    --accent: #e8a045;
+    --accent2: #c96d3a;
+    --accent-soft: rgba(232,160,69,0.12);
+    --text: #f0ece4;
+    --text2: #9e9baf;
+    --text3: #6b6880;
+    --danger: #e05252;
+    --border: rgba(255,255,255,0.06);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100dvh; overflow-x: hidden;
+    color-scheme: dark;
+  }
+
+  .screen { display:none; flex-direction:column; min-height:100dvh; }
+  .screen.active { display:flex; }
+
+  /* HEADER */
+  .app-header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top:0; z-index:100; backdrop-filter: blur(12px);
+  }
+  .back-btn {
+    width:36px; height:36px; border-radius:50%;
+    background: var(--surface3); border:none; color:var(--text); font-size:18px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; flex-shrink:0; transition: background 0.15s;
+  }
+  .back-btn:active { background: var(--accent-soft); }
+  .header-info { flex:1; min-width:0; }
+  .header-title { font-size:17px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .header-sub { font-size:12px; color:var(--text2); margin-top:2px; font-family:'DM Mono',monospace; }
+
+  .content { flex:1; overflow-y:auto; padding:16px; padding-bottom:100px; }
+
+  /* FAB */
+  .fab {
+    position:fixed; bottom:28px; right:20px; z-index:200;
+    width:56px; height:56px; border-radius:50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border:none; color:#fff; font-size:26px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow: 0 4px 20px rgba(232,160,69,0.4);
+    transition: transform 0.15s;
+  }
+  .fab:active { transform:scale(0.92); }
+
+  /* CARDS */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 0;
+    cursor:pointer; transition: background 0.15s;
+    position: relative; overflow: hidden;
+  }
+  .card:active { background: var(--surface2); }
+  .card::before {
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background: linear-gradient(var(--accent), var(--accent2));
+    border-radius:3px 0 0 3px;
+  }
+  .card-title { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .card-meta { font-size:12px; color:var(--text2); font-family:'DM Mono',monospace; }
+  .card-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .card-badge {
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid rgba(232,160,69,0.25); border-radius:20px;
+    padding:3px 10px; font-size:11px; font-family:'DM Mono',monospace; flex-shrink:0;
+  }
+
+  /* SWIPE DELETE — shared */
+  .swipe-wrap {
+    position: relative; overflow: hidden;
+    border-radius: var(--radius); margin-bottom: 10px;
+  }
+  .swipe-delete-bg {
+    position: absolute; right: 0; top: 0; bottom: 0;
+    width: 90px;
+    background: var(--danger);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px;
+    border-radius: var(--radius);
+    cursor: pointer; user-select: none;
+  }
+  .swipe-delete-bg span { font-size: 20px; line-height: 1; }
+  .swipe-delete-bg small { font-size: 11px; color: #fff; font-weight: 600; }
+  .swipe-edit-bg {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 90px;
+    background: #4a7fc1;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px;
+    border-radius: var(--radius);
+    cursor: pointer; user-select: none;
+  }
+  .swipe-edit-bg span { font-size: 20px; line-height: 1; }
+  .swipe-edit-bg small { font-size: 11px; color: #fff; font-weight: 600; }
+  .swipe-card {
+    position: relative; z-index: 1;
+    transform: translateX(0);
+    transition: transform 0.25s cubic-bezier(0.32,0.72,0,1);
+    will-change: transform;
+    margin-bottom: 0 !important;
+    border-radius: var(--radius);
+  }
+  .swipe-card.swiped-left  { transform: translateX(-90px); }
+  .swipe-card.swiped-right { transform: translateX(90px); }
+
+  /* product-item swipe */
+  .product-item {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:0;
+  }
+  .swipe-wrap-sm { border-radius: var(--radius-sm); }
+  .swipe-wrap-sm .swipe-card { border-radius: var(--radius-sm); }
+  .swipe-wrap-sm .swipe-delete-bg { border-radius: var(--radius-sm); }
+  .swipe-wrap-sm .swipe-edit-bg { border-radius: var(--radius-sm); }
+
+  /* EMPTY */
+  .empty { text-align:center; padding:40px 20px; color:var(--text3); font-size:14px; }
+  .empty-icon { font-size:36px; margin-bottom:10px; opacity:0.5; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size:11px; font-weight:700; letter-spacing:0.1em;
+    color:var(--text3); text-transform:uppercase; margin: 20px 0 10px;
+  }
+  .section-label:first-child { margin-top:0; }
+
+  /* MODAL */
+  .modal-overlay {
+    position:fixed; inset:0; z-index:500;
+    background: rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+    display:none; align-items:flex-end;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 22px 22px 0 0; width:100%; max-height:92dvh;
+    padding: 0 0 env(safe-area-inset-bottom,16px); overflow-y:auto;
+    animation: slideUp 0.25s cubic-bezier(0.32,0.72,0,1);
+  }
+  .modal-handle { width:36px; height:4px; border-radius:2px; background:var(--surface3); margin:12px auto 0; }
+  .modal-title { font-size:17px; font-weight:700; padding:16px 20px 12px; border-bottom:1px solid var(--border); }
+  .modal-body { padding:20px; }
+  .modal-footer { padding:0 20px 20px; display:flex; gap:10px; }
+
+  /* INPUTS */
+  .field { margin-bottom:16px; }
+  .field-label { font-size:12px; color:var(--text2); margin-bottom:6px; display:block; }
+  .field input, .field select {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text); padding:12px 14px; font-size:15px;
+    font-family:'Noto Sans TC',sans-serif; outline:none; appearance:none; transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus { border-color: rgba(232,160,69,0.5); }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239e9baf' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position: right 14px center; padding-right:36px;
+  }
+  .price-input { color:var(--accent) !important; font-family:'DM Mono',monospace !important; }
+
+  /* BUTTONS */
+  .btn {
+    height:48px; border-radius:var(--radius-sm); border:none;
+    font-size:15px; font-weight:700; cursor:pointer;
+    font-family:'Noto Sans TC',sans-serif; transition: opacity 0.15s, transform 0.1s;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn:active { opacity:0.8; transform:scale(0.98); }
+  .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; flex:1; }
+  .btn-ghost { background:var(--surface2); color:var(--text2); flex:1; }
+  .btn-sm {
+    height:36px; padding:0 14px; border-radius:6px; border:none;
+    font-size:13px; font-weight:600; cursor:pointer;
+    font-family:'Noto Sans TC',sans-serif;
+    background:var(--accent-soft); color:var(--accent);
+    border:1px solid rgba(232,160,69,0.25);
+    display:inline-flex; align-items:center; gap:4px;
+  }
+  .icon-btn {
+    width:30px; height:30px; border-radius:6px; border:none;
+    background:rgba(224,82,82,0.12); color:var(--danger);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:14px; flex-shrink:0;
+  }
+
+  /* HOME HERO */
+  .home-hero {
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border-bottom:1px solid var(--border); padding:24px 20px 20px;
+  }
+  .home-logo { font-size:28px; margin-bottom:8px; }
+  .home-title { font-size:22px; font-weight:700; }
+  .home-sub { font-size:13px; color:var(--text2); margin-top:6px; }
+
+  /* PILL ROW */
+  .pill-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .pill { background:var(--surface3); border-radius:20px; padding:4px 10px; font-size:12px; color:var(--text2); }
+  .pill-accent { color:var(--accent); }
+
+  /* PRODUCT ITEMS */
+  .product-header { display:grid; grid-template-columns:1fr auto 32px; align-items:center; gap:6px; }
+  .product-name { font-size:14px; font-weight:600; flex:1; }
+  .product-price { font-size:14px; font-weight:700; color:var(--accent); font-family:'DM Mono',monospace; flex-shrink:0; }
+  .expand-btn {
+    background:none; border:none; color:var(--text2);
+    font-size:16px; cursor:pointer; padding:4px; line-height:1;
+    transition:transform 0.2s; flex-shrink:0;
+  }
+  .expand-btn.open { transform:rotate(180deg); }
+  .variants-section { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); display:none; }
+  .variants-section.open { display:block; }
+  .variant-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .variant-input {
+    flex:1; background:var(--surface3); border:1px solid var(--border);
+    border-radius:6px; color:var(--text); padding:8px 10px; font-size:13px;
+    font-family:'Noto Sans TC',sans-serif; outline:none;
+  }
+  .variant-input:focus { border-color: rgba(232,160,69,0.4); }
+
+  /* TOTAL BAR */
+  .total-bar {
+    background: linear-gradient(135deg, rgba(232,160,69,0.1), rgba(201,109,58,0.07));
+    border:1px solid rgba(232,160,69,0.2); border-radius:var(--radius);
+    padding:14px 18px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .total-label { font-size:12px; color:var(--text2); margin-bottom:2px; }
+  .total-amount { font-size:22px; font-weight:700; color:var(--accent); font-family:'DM Mono',monospace; }
+
+  /* PURCHASE ITEMS — swipe wrapper */
+  .purchase-swipe-wrap {
+    position: relative; overflow: hidden;
+    border-radius: 10px; margin-bottom: 0;
+  }
+  .purchase-swipe-delete-bg {
+    position: absolute; right: 0; top: 0; bottom: 0;
+    width: 80px; background: var(--danger);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 3px;
+    border-radius: 10px; cursor: pointer; user-select: none;
+  }
+  .purchase-swipe-delete-bg span { font-size: 18px; line-height: 1; }
+  .purchase-swipe-delete-bg small { font-size: 10px; color: #fff; font-weight: 600; }
+  .purchase-swipe-edit-bg {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 80px; background: #4a7fc1;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 3px;
+    border-radius: 10px; cursor: pointer; user-select: none;
+  }
+  .purchase-swipe-edit-bg span { font-size: 18px; line-height: 1; }
+  .purchase-swipe-edit-bg small { font-size: 10px; color: #fff; font-weight: 600; }
+  .purchase-swipe-card {
+    position: relative; z-index: 1;
+    transform: translateX(0);
+    transition: transform 0.25s cubic-bezier(0.32,0.72,0,1);
+    will-change: transform;
+    border-radius: 10px;
+    background: var(--surface2);
+  }
+  .purchase-swipe-card.swiped-left  { transform: translateX(-80px); }
+  .purchase-swipe-card.swiped-right { transform: translateX(80px); }
+
+  .purchase-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:11px 14px; border-bottom:1px solid var(--border);
+  }
+  .purchase-item:last-child { border-bottom:none; }
+  .purchase-info { flex:1; min-width:0; }
+  /* ★ 改為金色——深色/淺色背景皆清晰可讀 */
+  .purchase-name {
+    font-size:14px;
+    font-weight:700;
+    color: var(--accent);
+  }
+  .purchase-sub { font-size:12px; color:var(--text2); margin-top:2px; }
+  .purchase-price { font-size:15px; font-weight:700; color:var(--accent); font-family:'DM Mono',monospace; flex-shrink:0; padding-top:2px; }
+  .repeat-badge {
+    display:inline-block; margin-top:4px;
+    font-size:10px; background:rgba(232,160,69,0.15); color:var(--accent);
+    border:1px solid rgba(232,160,69,0.3); border-radius:4px;
+    padding:1px 7px; font-family:'DM Mono',monospace;
+  }
+
+  /* purchase item separator wrapper */
+  .purchase-items-inner {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  /* WARN BANNER */
+  .warn-banner {
+    background: rgba(232,160,69,0.1); border:1px solid rgba(232,160,69,0.3);
+    border-radius:var(--radius-sm); padding:11px 14px; margin-bottom:16px;
+    font-size:13px; color:var(--accent); display:none; line-height:1.4;
+  }
+  .warn-banner.show { display:block; }
+
+  /* DIVIDER */
+  .divider { height:1px; background:var(--border); margin:18px 0; }
+
+  /* SECTION ROW */
+  .section-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .section-row .section-label { margin:0; }
+
+  /* TOAST */
+  .toast {
+    position:fixed; top:20px; left:50%; transform:translateX(-50%);
+    background:var(--surface3); border:1px solid var(--border);
+    color:var(--text); border-radius:20px; padding:10px 20px;
+    font-size:13px; font-weight:500; z-index:9999; white-space:nowrap;
+    animation: toastIn 0.3s, toastOut 0.3s 2.2s forwards; max-width:90vw; text-align:center;
+  }
+  .toast.warn { background:rgba(232,160,69,0.18); border-color:rgba(232,160,69,0.4); color:var(--accent); }
+
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  @keyframes toastOut { from{opacity:1} to{opacity:0} }
+</style>
+</head>
+<body>
+
+<!-- ══ HOME: Events ══ -->
+<div class="screen active" id="screen-home">
+  <div class="home-hero">
+    <div class="home-logo">🎪</div>
+    <div class="home-title">展覽購物規劃</div>
+    <div class="home-sub">管理場次・攤位・購買計畫</div>
+  </div>
+  <div class="content">
+    <div class="section-label">我的活動場次</div>
+    <div id="events-list"></div>
+  </div>
+  <button class="fab" onclick="openAddEvent()">＋</button>
+</div>
+
+<!-- ══ EVENT: Booths ══ -->
+<div class="screen" id="screen-event">
+  <div class="app-header">
+    <button class="back-btn" onclick="goTo('home')">←</button>
+    <div class="header-info">
+      <div class="header-title" id="ev-header-title"></div>
+      <div class="header-sub" id="ev-header-sub"></div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="section-label">攤位列表</div>
+    <div id="booths-list"></div>
+  </div>
+  <button class="fab" onclick="openAddBooth()">＋</button>
+</div>
+
+<!-- ══ BOOTH: Products + Plans ══ -->
+<div class="screen" id="screen-booth">
+  <div class="app-header">
+    <button class="back-btn" onclick="goTo('event')">←</button>
+    <div class="header-info">
+      <div class="header-title" id="booth-header-title"></div>
+      <div class="header-sub" id="booth-header-sub"></div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="section-label">商品清單</div>
+    <div id="products-list"></div>
+    <button class="btn-sm" onclick="openAddProduct()">＋ 新增商品</button>
+
+    <div class="divider"></div>
+
+    <div class="section-row">
+      <div class="section-label">購買計畫</div>
+      <button class="btn-sm" onclick="openAddPlan()">＋ 新增計畫</button>
+    </div>
+    <div class="total-bar">
+      <div>
+        <div class="total-label">此攤位合計花費</div>
+        <div class="total-amount" id="booth-total">$0</div>
+      </div>
+      <div style="font-size:12px;color:var(--text3)" id="booth-plan-count"></div>
+    </div>
+    <div id="plans-list"></div>
+  </div>
+</div>
+
+<!-- ══ PLAN: Purchase Items ══ -->
+<div class="screen" id="screen-plan">
+  <div class="app-header">
+    <button class="back-btn" onclick="goTo('booth')">←</button>
+    <div class="header-info">
+      <div class="header-title" id="plan-header-title"></div>
+      <div class="header-sub" id="plan-header-sub"></div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="total-bar">
+      <div>
+        <div class="total-label">本次計畫花費</div>
+        <div class="total-amount" id="plan-total-display">$0</div>
+      </div>
+    </div>
+    <div id="purchase-items-list"></div>
+    <button class="btn-sm" style="margin-top:8px" onclick="openAddPurchaseItem()">＋ 新增購買項目</button>
+  </div>
+</div>
+
+<!-- ═ MODAL: Edit Event ═ -->
+<div class="modal-overlay" id="modal-edit-event">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ 編輯活動場次</div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-evt-id"/>
+      <div class="field"><label class="field-label">活動名稱</label><input id="edit-evt-name" placeholder="例：台北漫博2025"/></div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label class="field-label">開始日期</label><input id="edit-evt-date-start" type="date"/></div>
+        <div class="field" style="flex:1"><label class="field-label">結束日期（單日可不填）</label><input id="edit-evt-date-end" type="date"/></div>
+      </div>
+      <div class="field"><label class="field-label">地點（選填）</label><input id="edit-evt-loc" placeholder="例：南港展覽館"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-event')">取消</button>
+      <button class="btn btn-primary" onclick="saveEditEvent()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Edit Booth ═ -->
+<div class="modal-overlay" id="modal-edit-booth">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ 編輯攤位</div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-booth-id"/>
+      <div class="field"><label class="field-label">攤位名稱</label><input id="edit-booth-name" placeholder="例：插畫家小橘"/></div>
+      <div class="field"><label class="field-label">攤位號碼（選填）</label><input id="edit-booth-no" placeholder="例：A-12"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-booth')">取消</button>
+      <button class="btn btn-primary" onclick="saveEditBooth()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Edit Product ═ -->
+<div class="modal-overlay" id="modal-edit-product">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ 編輯商品</div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-prod-idx"/>
+      <div class="field"><label class="field-label">商品名稱</label><input id="edit-prod-name" placeholder="例：壓克力鑰匙圈"/></div>
+      <div class="field"><label class="field-label">商品金額</label><input id="edit-prod-price" type="number" class="price-input" placeholder="0"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-product')">取消</button>
+      <button class="btn btn-primary" onclick="saveEditProduct()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Edit Plan ═ -->
+<div class="modal-overlay" id="modal-edit-plan">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ 編輯計畫名稱</div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-plan-id"/>
+      <div class="field"><label class="field-label">計畫名稱</label><input id="edit-plan-name" placeholder="例：第一次逛・湊滿額"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-plan')">取消</button>
+      <button class="btn btn-primary" onclick="saveEditPlan()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Add Event ═ -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✨ 新增活動場次</div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">活動名稱</label><input id="evt-name" placeholder="例：台北漫博2025"/></div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label class="field-label">開始日期</label><input id="evt-date-start" type="date"/></div>
+        <div class="field" style="flex:1"><label class="field-label">結束日期（單日可不填）</label><input id="evt-date-end" type="date"/></div>
+      </div>
+      <div class="field"><label class="field-label">地點（選填）</label><input id="evt-loc" placeholder="例：南港展覽館"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-event')">取消</button>
+      <button class="btn btn-primary" onclick="saveEvent()">建立</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Add Booth ═ -->
+<div class="modal-overlay" id="modal-booth">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🏪 新增攤位</div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">攤位名稱</label><input id="booth-name" placeholder="例：插畫家小橘"/></div>
+      <div class="field"><label class="field-label">攤位號碼（選填）</label><input id="booth-no" placeholder="例：A-12"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-booth')">取消</button>
+      <button class="btn btn-primary" onclick="saveBooth()">建立</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Add Product ═ -->
+<div class="modal-overlay" id="modal-product">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📦 新增商品</div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">商品名稱</label><input id="prod-name" placeholder="例：壓克力鑰匙圈"/></div>
+      <div class="field"><label class="field-label">商品金額（所有款式共用）</label><input id="prod-price" type="number" class="price-input" placeholder="0"/></div>
+      <div class="section-label" style="margin-top:0">款式（選填）</div>
+      <div id="variants-list"></div>
+      <button class="btn-sm" onclick="addVariantRow()">＋ 新增款式</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-product')">取消</button>
+      <button class="btn btn-primary" onclick="saveProduct()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Add Plan ═ -->
+<div class="modal-overlay" id="modal-plan">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📋 新增購買計畫</div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">計畫名稱</label><input id="plan-name" placeholder="例：第一次逛・湊滿額"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-plan')">取消</button>
+      <button class="btn btn-primary" onclick="savePlan()">建立並進入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Add Purchase Item ═ -->
+<div class="modal-overlay" id="modal-purchase">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🛒 新增購買項目</div>
+    <div class="modal-body">
+      <div class="warn-banner" id="repeat-warn"></div>
+      <div class="field">
+        <label class="field-label">選擇商品</label>
+        <select id="pur-product-select" onchange="onPurProductChange()">
+          <option value="">-- 請選擇商品 --</option>
+        </select>
+      </div>
+      <div class="field" id="pur-variant-field" style="display:none">
+        <label class="field-label">選擇款式</label>
+        <select id="pur-variant-select" onchange="onPurVariantChange()">
+          <option value="">-- 請選擇款式 --</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">金額（自動帶入）</label>
+        <input id="pur-price" type="number" class="price-input" placeholder="0" readonly style="opacity:0.75;cursor:default"/>
+      </div>
+      <div class="field">
+        <label class="field-label">備註（選填）</label>
+        <input id="pur-note" placeholder="例：湊滿額用"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-purchase')">取消</button>
+      <button class="btn btn-primary" onclick="savePurchaseItem()">加入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═ MODAL: Confirm Delete ═ -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--danger)">⚠️ 確認刪除</div>
+    <div class="modal-body">
+      <div id="confirm-msg" style="font-size:15px;line-height:1.6;color:var(--text)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm');resetAllSwipes()">取消</button>
+      <button class="btn" id="confirm-ok-btn" style="background:var(--danger);color:#fff;flex:1">刪除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ STATE ══
+let db = JSON.parse(localStorage.getItem('expo-db3') || '{"events":[]}');
+let curEventId = null;
+let curBoothId = null;
+let curPlanId  = null;
+
+function save() { localStorage.setItem('expo-db3', JSON.stringify(db)); }
+function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function getEvent() { return db.events.find(e=>e.id===curEventId); }
+function getBooth() { return getEvent()?.booths?.find(b=>b.id===curBoothId); }
+function getPlan()  { return getBooth()?.plans?.find(p=>p.id===curPlanId); }
+
+// ══ NAVIGATION ══
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  window.scrollTo(0,0);
+  if(screen==='home')  renderEvents();
+  if(screen==='event') renderEventScreen();
+  if(screen==='booth') renderBoothScreen();
+  if(screen==='plan')  renderPlanScreen();
+}
+
+// ══ HOME ══
+function renderEvents() {
+  const el = document.getElementById('events-list');
+  if(!db.events.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🎪</div>還沒有活動場次<br>點右下角 ＋ 建立第一個！</div>`;
+    return;
+  }
+  el.innerHTML = db.events.map(ev => {
+    const bCount = (ev.booths||[]).length;
+    const total  = eventTotal(ev);
+    return `<div class="swipe-wrap" id="wrap-ev-${ev.id}">
+      <div class="swipe-edit-bg" onclick="editEvent('${ev.id}')"><span>✏️</span><small>編輯</small></div>
+      <div class="swipe-delete-bg" onclick="deleteEvent('${ev.id}')"><span>🗑</span><small>刪除</small></div>
+      <div class="card swipe-card" id="card-ev-${ev.id}" onclick="openEvent('${ev.id}')">
+        <div class="card-title">${ev.name}</div>
+        <div class="card-meta">${formatDateRange(ev)}${ev.loc?' · '+ev.loc:''}</div>
+        <div class="pill-row">
+          <span class="pill">🏪 ${bCount} 攤位</span>
+          ${total>0?`<span class="pill pill-accent">$${total.toLocaleString()}</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  initSwipeOn('#events-list .swipe-card', '#screen-home');
+}
+function formatDateRange(ev) {
+  const start = ev.dateStart || ev.date || '';
+  const end   = ev.dateEnd || '';
+  if(!start) return '未設定日期';
+  if(!end || end===start) return start;
+  return start + ' ～ ' + end;
+}
+function eventTotal(ev) { return (ev.booths||[]).reduce((s,b)=>s+boothTotal(b),0); }
+function boothTotal(b)  { return (b.plans||[]).reduce((s,p)=>s+planTotal(p),0); }
+function planTotal(p)   { return (p.items||[]).reduce((s,it)=>s+(parseFloat(it.price)||0),0); }
+
+
+// ══ EDIT FUNCTIONS ══
+function editEvent(id) {
+  resetAllSwipes();
+  const ev = db.events.find(e=>e.id===id); if(!ev) return;
+  document.getElementById('edit-evt-id').value = id;
+  document.getElementById('edit-evt-name').value = ev.name;
+  document.getElementById('edit-evt-date-start').value = ev.dateStart||ev.date||'';
+  document.getElementById('edit-evt-date-end').value = ev.dateEnd||'';
+  document.getElementById('edit-evt-loc').value = ev.loc||'';
+  openModal('modal-edit-event');
+}
+function saveEditEvent() {
+  const id = document.getElementById('edit-evt-id').value;
+  const name = document.getElementById('edit-evt-name').value.trim();
+  if(!name) return showToast('請輸入活動名稱');
+  const ev = db.events.find(e=>e.id===id); if(!ev) return;
+  ev.name = name;
+  ev.dateStart = document.getElementById('edit-evt-date-start').value;
+  ev.dateEnd   = document.getElementById('edit-evt-date-end').value;
+  ev.loc  = document.getElementById('edit-evt-loc').value.trim();
+  save(); closeModal('modal-edit-event'); renderEvents(); showToast('✅ 已更新');
+}
+
+function editBooth(id) {
+  resetAllSwipes();
+  const booth = getEvent().booths.find(b=>b.id===id); if(!booth) return;
+  document.getElementById('edit-booth-id').value = id;
+  document.getElementById('edit-booth-name').value = booth.name;
+  document.getElementById('edit-booth-no').value = booth.no||'';
+  openModal('modal-edit-booth');
+}
+function saveEditBooth() {
+  const id = document.getElementById('edit-booth-id').value;
+  const name = document.getElementById('edit-booth-name').value.trim();
+  if(!name) return showToast('請輸入攤位名稱');
+  const booth = getEvent().booths.find(b=>b.id===id); if(!booth) return;
+  booth.name = name;
+  booth.no   = document.getElementById('edit-booth-no').value.trim();
+  save(); closeModal('modal-edit-booth'); renderEventScreen(); showToast('✅ 已更新');
+}
+
+function editProduct(i) {
+  resetAllSwipes();
+  const p = getBooth().products[i]; if(!p) return;
+  document.getElementById('edit-prod-idx').value = i;
+  document.getElementById('edit-prod-name').value = p.name;
+  document.getElementById('edit-prod-price').value = p.price||0;
+  openModal('modal-edit-product');
+}
+function saveEditProduct() {
+  const i = parseInt(document.getElementById('edit-prod-idx').value);
+  const name = document.getElementById('edit-prod-name').value.trim();
+  if(!name) return showToast('請輸入商品名稱');
+  const price = parseFloat(document.getElementById('edit-prod-price').value)||0;
+  if(!price) return showToast('請輸入商品金額');
+  const p = getBooth().products[i]; if(!p) return;
+  p.name = name; p.price = price;
+  save(); closeModal('modal-edit-product'); renderProducts(); showToast('✅ 已更新');
+}
+
+function editPlan(id) {
+  resetAllSwipes();
+  const plan = getBooth().plans.find(p=>p.id===id); if(!plan) return;
+  document.getElementById('edit-plan-id').value = id;
+  document.getElementById('edit-plan-name').value = plan.name;
+  openModal('modal-edit-plan');
+}
+function saveEditPlan() {
+  const id = document.getElementById('edit-plan-id').value;
+  const name = document.getElementById('edit-plan-name').value.trim();
+  if(!name) return showToast('請輸入計畫名稱');
+  const plan = getBooth().plans.find(p=>p.id===id); if(!plan) return;
+  plan.name = name;
+  save(); closeModal('modal-edit-plan'); renderPlans(); showToast('✅ 已更新');
+}
+
+// edit purchase item: just re-open note field (price is readonly from product)
+let _editPurchaseIdx = -1;
+function editPurchaseItem(i) {
+  resetAllSwipes();
+  const item = getPlan().items[i]; if(!item) return;
+  _editPurchaseIdx = i;
+  // Reuse the purchase modal but pre-fill and switch to edit mode
+  const booth = getBooth();
+  const pSel = document.getElementById('pur-product-select');
+  pSel.innerHTML = '<option value="">-- 請選擇商品 --</option>' +
+    (booth.products||[]).map((p,pi)=>`<option value="${pi}">${escH(p.name)} — $${(p.price||0).toLocaleString()}</option>`).join('');
+  // find product index
+  const pi = booth.products.findIndex(p=>p.id===item.productId);
+  if(pi>=0) {
+    pSel.value = pi;
+    const prod = booth.products[pi];
+    document.getElementById('pur-price').value = item.price;
+    const hasV = prod.variants&&prod.variants.length>0;
+    if(hasV) {
+      document.getElementById('pur-variant-field').style.display='block';
+      document.getElementById('pur-variant-select').innerHTML = '<option value="">-- 請選擇款式 --</option>'+
+        prod.variants.map((v,vi)=>`<option value="${vi}">${escH(v.name)}</option>`).join('');
+      const vi = prod.variants.findIndex(v=>v.id===item.variantId);
+      if(vi>=0) document.getElementById('pur-variant-select').value = vi;
+    } else {
+      document.getElementById('pur-variant-field').style.display='none';
+    }
+  }
+  document.getElementById('pur-note').value = item.note||'';
+  document.getElementById('repeat-warn').className='warn-banner';
+  // Switch save button to update mode
+  const footer = document.querySelector('#modal-purchase .modal-footer');
+  footer.innerHTML = `<button class="btn btn-ghost" onclick="closeModal('modal-purchase');_editPurchaseIdx=-1">取消</button>
+    <button class="btn btn-primary" onclick="saveEditPurchaseItem()">更新</button>`;
+  document.querySelector('#modal-purchase .modal-title').textContent = '✏️ 編輯購買項目';
+  openModal('modal-purchase');
+}
+function saveEditPurchaseItem() {
+  const i = _editPurchaseIdx;
+  if(i<0) return;
+  const booth=getBooth();
+  const pi=document.getElementById('pur-product-select').value;
+  if(pi==='') return showToast('請選擇商品');
+  const prod=booth.products[parseInt(pi)];
+  const hasV=prod.variants&&prod.variants.length>0;
+  const vi=document.getElementById('pur-variant-select').value;
+  if(hasV&&vi==='') return showToast('請選擇款式');
+  const price=parseFloat(document.getElementById('pur-price').value)||0;
+  if(!price) return showToast('商品金額無效');
+  const note=document.getElementById('pur-note').value.trim();
+  const variant=hasV?prod.variants[parseInt(vi)]:null;
+  const item=getPlan().items[i];
+  item.productId=prod.id; item.productName=prod.name;
+  item.variantId=variant?variant.id:null;
+  item.variantName=variant?variant.name:null;
+  item.price=price; item.note=note;
+  _editPurchaseIdx=-1;
+  save(); closeModal('modal-purchase');
+  // restore add mode footer
+  document.querySelector('#modal-purchase .modal-footer').innerHTML=`<button class="btn btn-ghost" onclick="closeModal('modal-purchase')">取消</button>
+    <button class="btn btn-primary" onclick="savePurchaseItem()">加入</button>`;
+  document.querySelector('#modal-purchase .modal-title').textContent='🛒 新增購買項目';
+  renderPlanScreen(); showToast('✅ 已更新');
+}
+
+function openEvent(id) { curEventId=id; goTo('event'); }
+function deleteEvent(id) {
+  resetAllSwipes();
+  const ev = db.events.find(e=>e.id===id);
+  if(!ev) return;
+  showConfirm(`確認要刪除活動「${ev.name}」嗎？\n此操作將同時刪除其下所有攤位與計畫。`, ()=>{
+    db.events=db.events.filter(e=>e.id!==id); save(); renderEvents();
+  });
+}
+function openAddEvent() {
+  ['evt-name','evt-loc','evt-date-start','evt-date-end'].forEach(id=>document.getElementById(id).value='');
+  openModal('modal-event');
+}
+function saveEvent() {
+  const name=document.getElementById('evt-name').value.trim();
+  if(!name) return showToast('請輸入活動名稱');
+  const dateStart=document.getElementById('evt-date-start').value;
+  const dateEnd=document.getElementById('evt-date-end').value;
+  db.events.unshift({id:uid(),name,dateStart,dateEnd,loc:document.getElementById('evt-loc').value.trim(),booths:[]});
+  save(); closeModal('modal-event'); renderEvents();
+}
+
+// ══ EVENT SCREEN (booths — swipe) ══
+function renderEventScreen() {
+  const ev=getEvent(); if(!ev) return;
+  document.getElementById('ev-header-title').textContent=ev.name;
+  document.getElementById('ev-header-sub').textContent=formatDateRange(ev)+(ev.loc?' · '+ev.loc:'');
+  const el=document.getElementById('booths-list');
+  if(!(ev.booths||[]).length) {
+    el.innerHTML=`<div class="empty"><div class="empty-icon">🏪</div>還沒有攤位<br>點右下角 ＋ 新增</div>`; return;
+  }
+  el.innerHTML=ev.booths.map(b=>{
+    const pN=(b.products||[]).length;
+    const plN=(b.plans||[]).length;
+    const total=boothTotal(b);
+    return `<div class="swipe-wrap" id="wrap-bo-${b.id}">
+      <div class="swipe-edit-bg" onclick="editBooth('${b.id}')"><span>✏️</span><small>編輯</small></div>
+      <div class="swipe-delete-bg" onclick="deleteBooth('${b.id}')"><span>🗑</span><small>刪除</small></div>
+      <div class="card swipe-card" id="card-bo-${b.id}" onclick="openBooth('${b.id}')">
+        <div class="card-row">
+          <div>
+            <div class="card-title">${escH(b.name)}</div>
+            <div class="card-meta">${b.no?'攤位 '+b.no+' · ':''}${pN} 商品 · ${plN} 計畫</div>
+          </div>
+          ${total>0?`<span class="card-badge">$${total.toLocaleString()}</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  initSwipeOn('#booths-list .swipe-card', '#screen-event');
+}
+function openBooth(id) { curBoothId=id; goTo('booth'); }
+function openAddBooth() {
+  document.getElementById('booth-name').value='';
+  document.getElementById('booth-no').value='';
+  openModal('modal-booth');
+}
+function saveBooth() {
+  const name=document.getElementById('booth-name').value.trim();
+  if(!name) return showToast('請輸入攤位名稱');
+  const ev=getEvent(); if(!ev.booths) ev.booths=[];
+  ev.booths.push({id:uid(),name,no:document.getElementById('booth-no').value.trim(),products:[],plans:[]});
+  save(); closeModal('modal-booth'); renderEventScreen();
+}
+function deleteBooth(id) {
+  resetAllSwipes();
+  const booth=getEvent().booths.find(b=>b.id===id);
+  if(!booth) return;
+  showConfirm(`確認要刪除攤位「${booth.name}」嗎？\n此操作將同時刪除其下所有商品與計畫。`, ()=>{
+    getEvent().booths=getEvent().booths.filter(b=>b.id!==id);
+    save(); renderEventScreen();
+  });
+}
+
+// ══ BOOTH SCREEN ══
+function renderBoothScreen() {
+  const booth=getBooth(); if(!booth) return;
+  document.getElementById('booth-header-title').textContent=booth.name;
+  document.getElementById('booth-header-sub').textContent=(booth.no?'攤位 '+booth.no+' · ':'')+getEvent().name;
+  renderProducts();
+  renderPlans();
+}
+
+// ── Products (swipe) ──
+function renderProducts() {
+  const booth=getBooth();
+  const el=document.getElementById('products-list');
+  if(!(booth.products||[]).length) {
+    el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-icon" style="font-size:28px">📦</div>還沒有商品</div>`; return;
+  }
+  el.innerHTML=booth.products.map((p,i)=>{
+    const hasV=p.variants&&p.variants.length>0;
+    const varHtml=hasV?p.variants.map((v,vi)=>`
+      <div class="variant-row">
+        <input class="variant-input" value="${escH(v.name)}" oninput="updateVariant(${i},${vi},this.value)" placeholder="款式名稱"/>
+        <button class="icon-btn" onclick="removeVariant(${i},${vi})">✕</button>
+      </div>`).join(''):'';
+    return `<div class="swipe-wrap swipe-wrap-sm" id="wrap-pr-${p.id}">
+      <div class="swipe-edit-bg" onclick="editProduct(${i})"><span>✏️</span><small>編輯</small></div>
+      <div class="swipe-delete-bg" onclick="deleteProduct(${i},'${p.name}')"><span>🗑</span><small>刪除</small></div>
+      <div class="product-item swipe-card" id="card-pr-${p.id}">
+        <div class="product-header">
+          <span class="product-name">${escH(p.name)}</span>
+          <span class="product-price">$${(p.price||0).toLocaleString()}</span>
+          ${hasV?`<button class="expand-btn" onclick="toggleExpand(this)">▾</button>`:`<span style="width:32px;display:inline-block"></span>`}
+        </div>
+        ${hasV?`<div class="variants-section">
+          ${varHtml}
+          <button class="btn-sm" style="margin-top:6px;font-size:12px" onclick="addVariantToProduct(${i})">＋ 款式</button>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  initSwipeOn('#products-list .swipe-card', '#screen-booth');
+}
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toggleExpand(btn) {
+  btn.classList.toggle('open');
+  btn.closest('.product-item').querySelector('.variants-section').classList.toggle('open');
+}
+function updateVariant(pi,vi,val) { getBooth().products[pi].variants[vi].name=val; save(); }
+function removeVariant(pi,vi) { getBooth().products[pi].variants.splice(vi,1); save(); renderProducts(); }
+function addVariantToProduct(pi) {
+  getBooth().products[pi].variants.push({id:uid(),name:''}); save(); renderProducts();
+  setTimeout(()=>{
+    const items=document.querySelectorAll('.product-item');
+    if(items[pi]){
+      items[pi].querySelector('.variants-section')?.classList.add('open');
+      items[pi].querySelector('.expand-btn')?.classList.add('open');
+    }
+  },40);
+}
+function deleteProduct(i, name) {
+  resetAllSwipes();
+  showConfirm(`確認要刪除商品「${name}」嗎？`, ()=>{
+    getBooth().products.splice(i,1); save(); renderProducts();
+  });
+}
+
+let tempVariants=[];
+function openAddProduct() {
+  document.getElementById('prod-name').value='';
+  document.getElementById('prod-price').value='';
+  tempVariants=[]; renderVariantEditor(); openModal('modal-product');
+}
+function renderVariantEditor() {
+  document.getElementById('variants-list').innerHTML=tempVariants.map((v,i)=>`
+    <div class="variant-row">
+      <input class="variant-input" value="${escH(v.name)}" oninput="tempVariants[${i}].name=this.value" placeholder="款式名稱（例：藍色）"/>
+      <button class="icon-btn" onclick="removeTempVariant(${i})">✕</button>
+    </div>`).join('');
+}
+function addVariantRow() { tempVariants.push({id:uid(),name:''}); renderVariantEditor(); }
+function removeTempVariant(i) { tempVariants.splice(i,1); renderVariantEditor(); }
+function saveProduct() {
+  const name=document.getElementById('prod-name').value.trim();
+  if(!name) return showToast('請輸入商品名稱');
+  const price=parseFloat(document.getElementById('prod-price').value)||0;
+  if(!price) return showToast('請輸入商品金額');
+  getBooth().products.push({
+    id:uid(), name, price,
+    variants: tempVariants.filter(v=>v.name.trim()).map(v=>({id:v.id||uid(), name:v.name.trim()}))
+  });
+  save(); closeModal('modal-product'); renderProducts(); showToast('✅ 商品已新增');
+}
+
+// ── Plans (swipe) ──
+function renderPlans() {
+  const booth=getBooth();
+  const plans=booth.plans||[];
+  const total=boothTotal(booth);
+  document.getElementById('booth-total').textContent='$'+total.toLocaleString();
+  document.getElementById('booth-plan-count').textContent=plans.length?`共 ${plans.length} 個計畫`:'';
+  const el=document.getElementById('plans-list');
+  if(!plans.length) {
+    el.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-icon" style="font-size:28px">📋</div>還沒有購買計畫</div>`; return;
+  }
+  el.innerHTML=plans.map(p=>{
+    const ptotal=planTotal(p);
+    const itemN=(p.items||[]).length;
+    return `<div class="swipe-wrap" id="wrap-pl-${p.id}">
+      <div class="swipe-edit-bg" onclick="editPlan('${p.id}')"><span>✏️</span><small>編輯</small></div>
+      <div class="swipe-delete-bg" onclick="deletePlan('${p.id}','${escH(p.name)}')"><span>🗑</span><small>刪除</small></div>
+      <div class="card swipe-card" id="card-pl-${p.id}" onclick="openPlan('${p.id}')">
+        <div class="card-row">
+          <div>
+            <div class="card-title">${escH(p.name)}</div>
+            <div class="card-meta">${itemN} 項購買項目</div>
+          </div>
+          ${ptotal>0?`<span class="card-badge">$${ptotal.toLocaleString()}</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  initSwipeOn('#plans-list .swipe-card', '#screen-booth');
+}
+function openPlan(id) { curPlanId=id; goTo('plan'); }
+function openAddPlan() {
+  document.getElementById('plan-name').value=''; openModal('modal-plan');
+}
+function savePlan() {
+  const name=document.getElementById('plan-name').value.trim();
+  if(!name) return showToast('請輸入計畫名稱');
+  const booth=getBooth(); if(!booth.plans) booth.plans=[];
+  const newPlan={id:uid(),name,items:[]};
+  booth.plans.push(newPlan);
+  save(); closeModal('modal-plan'); renderPlans();
+  curPlanId=newPlan.id;
+  setTimeout(()=>goTo('plan'),220);
+}
+function deletePlan(id, name) {
+  resetAllSwipes();
+  showConfirm(`確認要刪除計畫「${name}」嗎？\n此操作將同時刪除計畫內的所有購買項目。`, ()=>{
+    getBooth().plans=getBooth().plans.filter(p=>p.id!==id);
+    save(); renderPlans();
+  });
+}
+
+// ══ PLAN SCREEN ══
+function renderPlanScreen() {
+  const plan=getPlan(); const booth=getBooth(); if(!plan||!booth) return;
+  document.getElementById('plan-header-title').textContent=plan.name;
+  document.getElementById('plan-header-sub').textContent=booth.name+(booth.no?' · 攤位 '+booth.no:'');
+  document.getElementById('plan-total-display').textContent='$'+planTotal(plan).toLocaleString();
+
+  const el=document.getElementById('purchase-items-list');
+  const items=plan.items||[];
+  if(!items.length) {
+    el.innerHTML=`<div class="empty" style="padding:24px 0"><div class="empty-icon" style="font-size:28px">🛒</div>還沒有購買項目<br>點下方新增</div>`; return;
+  }
+
+  const countMap={};
+  (booth.plans||[]).forEach(p=>(p.items||[]).forEach(it=>{
+    const k=it.productId+':'+(it.variantId||'');
+    countMap[k]=(countMap[k]||0)+1;
+  }));
+
+  // Wrap all items in a container, each item is a swipe unit
+  el.innerHTML = `<div class="purchase-items-inner">` +
+    items.map((it,i)=>{
+      const k=it.productId+':'+(it.variantId||'');
+      const cnt=countMap[k];
+      return `<div class="purchase-swipe-wrap" id="wrap-pu-${it.id||i}">
+        <div class="purchase-swipe-edit-bg" onclick="editPurchaseItem(${i})"><span>✏️</span><small>編輯</small></div>
+        <div class="purchase-swipe-delete-bg" onclick="deletePurchaseItem(${i},'${escH(it.productName)}')"><span>🗑</span><small>刪除</small></div>
+        <div class="purchase-swipe-card" id="card-pu-${it.id||i}">
+          <div class="purchase-item">
+            <div class="purchase-info">
+              <div class="purchase-name">${escH(it.productName)}</div>
+              <div class="purchase-sub">${it.variantName?'款式：'+escH(it.variantName):''}${it.note?(it.variantName?' · ':'')+escH(it.note):''}</div>
+              ${cnt>1?`<span class="repeat-badge">⚠ 此攤位共購買 ${cnt} 次</span>`:''}
+            </div>
+            <span class="purchase-price">$${(parseFloat(it.price)||0).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('') +
+  `</div>`;
+
+  initPurchaseSwipe();
+}
+
+function deletePurchaseItem(i, name) {
+  resetAllSwipes();
+  showConfirm(`確認要刪除「${name}」這筆購買項目嗎？`, ()=>{
+    getPlan().items.splice(i,1); save(); renderPlanScreen();
+  });
+}
+
+// ── Add Purchase Item ──
+function openAddPurchaseItem() {
+  const booth=getBooth();
+  const pSel=document.getElementById('pur-product-select');
+  pSel.innerHTML='<option value="">-- 請選擇商品 --</option>'+
+    (booth.products||[]).map((p,i)=>`<option value="${i}">${escH(p.name)} — $${(p.price||0).toLocaleString()}</option>`).join('');
+  document.getElementById('pur-variant-field').style.display='none';
+  document.getElementById('pur-variant-select').innerHTML='<option value="">-- 請選擇款式 --</option>';
+  document.getElementById('pur-price').value='';
+  document.getElementById('pur-note').value='';
+  document.getElementById('repeat-warn').className='warn-banner';
+  openModal('modal-purchase');
+}
+
+function onPurProductChange() {
+  const pi=document.getElementById('pur-product-select').value;
+  const booth=getBooth();
+  const warnEl=document.getElementById('repeat-warn');
+  warnEl.className='warn-banner';
+
+  if(pi==='') {
+    document.getElementById('pur-variant-field').style.display='none';
+    document.getElementById('pur-price').value='';
+    return;
+  }
+  const prod=booth.products[parseInt(pi)];
+  document.getElementById('pur-price').value=prod.price||0;
+
+  const hasV=prod.variants&&prod.variants.length>0;
+  if(hasV) {
+    document.getElementById('pur-variant-field').style.display='block';
+    document.getElementById('pur-variant-select').innerHTML='<option value="">-- 請選擇款式 --</option>'+
+      prod.variants.map((v,vi)=>`<option value="${vi}">${escH(v.name)}</option>`).join('');
+  } else {
+    document.getElementById('pur-variant-field').style.display='none';
+    const cnt=getRepeatCount(prod.id, null);
+    if(cnt>0) {
+      warnEl.textContent=`⚠ 此商品在此攤位已有 ${cnt} 次購買記錄`;
+      warnEl.className='warn-banner show';
+    }
+  }
+}
+
+function onPurVariantChange() {
+  const pi=parseInt(document.getElementById('pur-product-select').value);
+  const vi=document.getElementById('pur-variant-select').value;
+  const booth=getBooth();
+  const warnEl=document.getElementById('repeat-warn');
+  warnEl.className='warn-banner';
+
+  if(isNaN(pi)||vi==='') return;
+  const prod=booth.products[pi];
+  const variant=prod.variants[parseInt(vi)];
+  const cnt=getRepeatCount(prod.id, variant.id);
+  if(cnt>0) {
+    warnEl.textContent=`⚠ 此款式「${variant.name}」在此攤位已有 ${cnt} 次購買記錄`;
+    warnEl.className='warn-banner show';
+  }
+}
+
+function getRepeatCount(productId, variantId) {
+  const booth=getBooth(); let count=0;
+  (booth.plans||[]).forEach(p=>(p.items||[]).forEach(it=>{
+    if(it.productId===productId && (it.variantId||null)===(variantId||null)) count++;
+  }));
+  return count;
+}
+
+function savePurchaseItem() {
+  const pi=document.getElementById('pur-product-select').value;
+  if(pi==='') return showToast('請選擇商品');
+  const booth=getBooth();
+  const prod=booth.products[parseInt(pi)];
+  const hasV=prod.variants&&prod.variants.length>0;
+  const vi=document.getElementById('pur-variant-select').value;
+  if(hasV&&vi==='') return showToast('請選擇款式');
+  const price=parseFloat(document.getElementById('pur-price').value)||0;
+  if(!price) return showToast('商品金額無效');
+  const note=document.getElementById('pur-note').value.trim();
+  const variant=hasV?prod.variants[parseInt(vi)]:null;
+
+  getPlan().items.push({
+    id:uid(),
+    productId:prod.id, productName:prod.name,
+    variantId:variant?variant.id:null,
+    variantName:variant?variant.name:null,
+    price, note
+  });
+  save(); closeModal('modal-purchase'); renderPlanScreen();
+  showToast('✅ 已加入購買計畫');
+}
+
+// ══ MODAL ══
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); });
+});
+
+// ══ TOAST ══
+function showToast(msg,warn=false) {
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div');
+  t.className='toast'+(warn?' warn':'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2600);
+}
+
+// ══ CONFIRM DIALOG ══
+function showConfirm(msg, onOk) {
+  document.getElementById('confirm-msg').textContent = msg;
+  const btn = document.getElementById('confirm-ok-btn');
+  btn.onclick = () => { closeModal('modal-confirm'); onOk(); };
+  openModal('modal-confirm');
+}
+
+// ══ SWIPE HELPERS ══
+function resetAllSwipes() {
+  document.querySelectorAll('.swiped-left,.swiped-right').forEach(c=>c.classList.remove('swiped-left','swiped-right'));
+}
+document.getElementById('modal-confirm').addEventListener('click', e=>{
+  if(e.target===document.getElementById('modal-confirm')) resetAllSwipes();
+});
+
+// Generic swipe init — selector scoped to a screen
+function initSwipeOn(cardSelector, screenSelector) {
+  const screen = document.querySelector(screenSelector);
+  document.querySelectorAll(cardSelector).forEach(card => {
+    attachSwipe(card, 90, 45, 'swiped-left', 'swiped-right');
+    // 攔截 swiped 狀態下的卡片點擊，防止誤跳頁
+    card.addEventListener('click', e=>{
+      if(card.classList.contains('swiped-left')||card.classList.contains('swiped-right')) {
+        e.stopPropagation(); e.preventDefault();
+      }
+    }, true);
+  });
+  if(screen && !screen._swipeListenerAttached) {
+    screen._swipeListenerAttached = true;
+    screen.addEventListener('touchstart', e=>{
+      if(!e.target.closest('.swipe-card')&&!e.target.closest('.swipe-delete-bg')&&!e.target.closest('.swipe-edit-bg')) {
+        document.querySelectorAll(cardSelector).forEach(c=>c.classList.remove('swiped-left','swiped-right'));
+      }
+    },{passive:true});
+  }
+}
+
+function initPurchaseSwipe() {
+  document.querySelectorAll('.purchase-swipe-card').forEach(card => {
+    attachSwipe(card, 80, 40, 'swiped-left', 'swiped-right');
+  });
+  const screen = document.getElementById('screen-plan');
+  if(screen && !screen._swipeListenerAttached) {
+    screen._swipeListenerAttached = true;
+    screen.addEventListener('touchstart', e=>{
+      if(!e.target.closest('.purchase-swipe-card')&&!e.target.closest('.purchase-swipe-delete-bg')&&!e.target.closest('.purchase-swipe-edit-bg')) {
+        document.querySelectorAll('.purchase-swipe-card').forEach(c=>c.classList.remove('swiped-left','swiped-right'));
+      }
+    },{passive:true});
+  }
+}
+
+function attachSwipe(card, revealPx, threshold, leftClass, rightClass) {
+  // leftClass  = swiped left  → shows delete (right side)
+  // rightClass = swiped right → shows edit  (left side)
+  let startX=0, startY=0, dx=0, dragging=false, locked=false;
+
+  function resetOthers() {
+    const scope = card.closest('[id$="-list"], .purchase-items-inner, .content');
+    scope?.querySelectorAll('.swiped-left,.swiped-right').forEach(el=>{
+      if(el!==card){ el.classList.remove('swiped-left','swiped-right'); }
+    });
+  }
+
+  function onStart(x,y) { startX=x; startY=y; dx=0; dragging=true; locked=false; card.style.transition='none'; }
+  function onMove(x,y) {
+    if(!dragging||locked) return;
+    const mx=x-startX, my=y-startY;
+    if(Math.abs(my)>Math.abs(mx)+5){ locked=true; return; }
+    // allow both directions but clamp
+    dx=Math.max(-(revealPx+10), Math.min(revealPx+10, mx));
+    card.style.transform=`translateX(${dx}px)`;
+  }
+  function onEnd() {
+    if(!dragging) return; dragging=false; card.style.transition='';
+    card.style.transform='';
+    if(dx < -threshold) {
+      resetOthers();
+      card.classList.remove(rightClass);
+      card.classList.add(leftClass);
+    } else if(dx > threshold) {
+      resetOthers();
+      card.classList.remove(leftClass);
+      card.classList.add(rightClass);
+    } else if(Math.abs(dx) > 5) {
+      card.classList.remove(leftClass, rightClass);
+    }
+    // if dx≈0 (tap), do nothing — keep current state
+  }
+
+  card.addEventListener('touchstart', e=>onStart(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+  card.addEventListener('touchmove',  e=>onMove(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+  card.addEventListener('touchend',   ()=>onEnd());
+  card.addEventListener('mousedown', e=>{
+    onStart(e.clientX,e.clientY);
+    const mm=ev=>onMove(ev.clientX,ev.clientY);
+    const mu=()=>{ onEnd(); document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+    document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
+  });
+}
+
+renderEvents();
+</script>
+</body>
+</html>
