@@ -385,7 +385,7 @@
   </div>
   <div class="content">
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
-      <button class="btn-sm" onclick="exportLayer('event')" style="font-size:12px">⬆️ 匯出此場次</button>
+      <button class="btn-sm" onclick="exportLayer('event')" style="font-size:12px">⬆️ 匯出攤位</button>
       <button class="btn-sm" onclick="triggerImport('event')" style="font-size:12px">⬇️ 匯入攤位</button>
     </div>
     <div class="section-label">攤位列表</div>
@@ -405,7 +405,7 @@
   </div>
   <div class="content">
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
-      <button class="btn-sm" onclick="exportLayer('booth')" style="font-size:12px">⬆️ 匯出此攤位</button>
+      <button class="btn-sm" onclick="exportLayer('booth')" style="font-size:12px">⬆️ 匯出商品</button>
       <button class="btn-sm" onclick="triggerImport('booth')" style="font-size:12px">⬇️ 匯入商品</button>
     </div>
     <div class="section-label">商品清單</div>
@@ -441,7 +441,7 @@
   <div class="content">
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
       <button class="btn-sm" onclick="exportLayer('plan')" style="font-size:12px">⬆️ 匯出此計畫</button>
-      <button class="btn-sm" onclick="triggerImport('plan')" style="font-size:12px">⬇️ 匯入項目</button>
+      <button class="btn-sm" onclick="triggerImport('plan')" style="font-size:12px">⬇️ 匯入計畫</button>
     </div>
     <div class="total-bar">
       <div>
@@ -461,7 +461,7 @@
     <div class="modal-title">✏️ 編輯活動場次</div>
     <div class="modal-body">
       <input type="hidden" id="edit-evt-id"/>
-      <div class="field"><label class="field-label">活動名稱</label><input id="edit-evt-name" placeholder="例：台北漫博2025"/></div>
+      <div class="field"><label class="field-label">活動名稱</label><input id="edit-evt-name" placeholder="例：2026文博會"/></div>
       <div style="display:flex;gap:10px">
         <div class="field" style="flex:1"><label class="field-label">開始日期</label><input id="edit-evt-date-start" type="date"/></div>
         <div class="field" style="flex:1"><label class="field-label">結束日期（單日可不填）</label><input id="edit-evt-date-end" type="date"/></div>
@@ -482,7 +482,7 @@
     <div class="modal-title">✏️ 編輯攤位</div>
     <div class="modal-body">
       <input type="hidden" id="edit-booth-id"/>
-      <div class="field"><label class="field-label">攤位名稱</label><input id="edit-booth-name" placeholder="例：插畫家小橘"/></div>
+      <div class="field"><label class="field-label">攤位名稱</label><input id="edit-booth-name" placeholder="例：鹿人與泥鰍"/></div>
       <div class="field"><label class="field-label">攤位號碼（選填）</label><input id="edit-booth-no" placeholder="例：A-12"/></div>
     </div>
     <div class="modal-footer">
@@ -516,7 +516,7 @@
     <div class="modal-title">✏️ 編輯計畫名稱</div>
     <div class="modal-body">
       <input type="hidden" id="edit-plan-id"/>
-      <div class="field"><label class="field-label">計畫名稱</label><input id="edit-plan-name" placeholder="例：第一次逛・湊滿額"/></div>
+      <div class="field"><label class="field-label">計畫名稱</label><input id="edit-plan-name" placeholder="例：第一輪購買"/></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-edit-plan')">取消</button>
@@ -551,7 +551,7 @@
     <div class="modal-handle"></div>
     <div class="modal-title">🏪 新增攤位</div>
     <div class="modal-body">
-      <div class="field"><label class="field-label">攤位名稱</label><input id="booth-name" placeholder="例：插畫家小橘"/></div>
+      <div class="field"><label class="field-label">攤位名稱</label><input id="booth-name" placeholder="例：鹿人與泥鰍"/></div>
       <div class="field"><label class="field-label">攤位號碼（選填）</label><input id="booth-no" placeholder="例：A-12"/></div>
     </div>
     <div class="modal-footer">
@@ -586,7 +586,7 @@
     <div class="modal-handle"></div>
     <div class="modal-title">📋 新增購買計畫</div>
     <div class="modal-body">
-      <div class="field"><label class="field-label">計畫名稱</label><input id="plan-name" placeholder="例：第一次逛・湊滿額"/></div>
+      <div class="field"><label class="field-label">計畫名稱</label><input id="plan-name" placeholder="例：第一次輪購買"/></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-plan')">取消</button>
